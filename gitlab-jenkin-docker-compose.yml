@@ -1,0 +1,62 @@
+version: '3'
+networks:
+  gitlab:
+    driver: bridge
+
+services:
+  gitlab:
+    image: 'gitlab/gitlab-ee:latest'
+    hostname: 'gitlab.datnn.com'
+    environment:
+      - |
+          GITLAB_OMNIBUS_CONFIG=
+          external_url 'http://gitlab.datnn.com'
+          gitlab_rails['initial_root_password'] = 'S3cr3tR00t!!'
+          postgresql['enable'] = false
+          postgresql['ssl'] = 'off'
+          gitlab_rails['auto_migrate'] = true
+          gitlab_rails['db_database'] = 'gitlab'
+          gitlab_rails['db_host'] = 'gitlab_database'
+          gitlab_rails['db_port'] = '5432'
+          gitlab_rails['db_username'] = 'git'
+          gitlab_rails['db_password'] = 'git'
+          redis['enable'] = false
+          gitlab_rails['redis_host'] = 'gitlab_redis'
+          gitlab_rails['redis_port'] = 6379
+      - GITLAB_SKIP_UNMIGRATED_DATA_CHECK=true
+    ports:
+      - 80:80
+      # - 443:443
+      - 22:22
+    volumes:
+      - /srv/gitlab/config:/etc/config
+      - /srv/gitlab/log:/var/log/gitlab
+      - /srv/gitlab/data:/var/opt/gitlab
+    shm_size: '256m'
+    networks:
+      - gitlab
+    depends_on:
+      - gitlab_database
+      - gitlab_redis
+  
+  gitlab_redis:
+    image: 'redis:7.2.0-alpine'
+    restart: always
+    ports:
+      - 6379:6379
+    networks:
+      - gitlab
+    
+  gitlab_database:
+    image: 'postgres:13.12-alpine'
+    restart: always
+    ports:
+      - 5432:5432
+    environment:
+      - POSTGRES_USER=git
+      - POSTGRES_PASSWORD=git
+      - POSTGRES_DB=gitlab
+    networks:
+      - gitlab
+  # jenkins:
+  #   image: ''
